@@ -1,0 +1,422 @@
+﻿@page "/team-member-skill"
+@using Blazorise
+@using Avatar.Web.Models
+@using Avatar.Web.Modules.ApiAccess.Handlers
+@using Avatar.Web.Components
+@using static Avatar.Framework.Enums.Enums
+@inject ITeamMemberSkillApiHandler teamMemberSkillApiHandler
+@inject ISkillApiHandler skillApiHandler
+@inject ITeamMemberApiHandler teamMemberApiHandler
+@inject IJSRuntime JSRuntime
+
+
+<Div Class="skill-builder-section">
+    <Row>
+        <Column ColumnSize="ColumnSize.Is4">
+            <div class="team-member-sidebar">
+                <div class="sidebar-header">
+                    <h4>Team Members</h4>
+                </div>
+                <div class="team-member-list">
+                    @foreach (var member in TeamMembers)
+                    {
+                        <div class="team-member-card @(selectedTeamMember?.Id == member.Id ? "active" : "")" 
+                        @onclick="@(() => SelectTeamMember(member))">
+                            <div class="member-avatar">
+                                <span>@member.FirstName[0]@member.LastName[0]</span>
+                            </div>
+                            <div class="member-info">
+                                <div class="member-name">@member.FirstName @member.LastName</div>
+                                <div class="member-title">@member.Title</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </Column>
+        <Column Class="profile-details" ColumnSize="ColumnSize.Is8">
+            @if (selectedTeamMember.LastName != null)
+            {
+                <div class="profile-header">
+                    <h3>@selectedTeamMember.FirstName @selectedTeamMember.LastName</h3>
+                    <p class="text-muted mb-4">@selectedTeamMember.Title</p>
+
+                    <div class="skills-table">
+                        <h5 class="mb-3">Skills</h5>
+                        @if (TeamMemberSkills.Any())
+                        {
+                            <Table Hoverable="true" Bordered="true" Responsive="true">
+                                <TableHeader ThemeContrast="ThemeContrast.Light">
+                                    <TableRow>
+                                        <TableHeaderCell>Skill</TableHeaderCell>
+                                        <TableHeaderCell>Level</TableHeaderCell>
+                                        <TableHeaderCell>Actions</TableHeaderCell>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    @foreach (var assignment in TeamMemberSkills)
+                                    {
+                                        <TableRow>
+                                            <TableRowCell>@GetSkillName(assignment.SkillId)</TableRowCell>
+                                            <TableRowCell>@assignment.Level</TableRowCell>
+                                            <TableRowCell>
+                                                <Div>
+                                                    <Button Color="Color.Warning" Outline="true" Clicked="@(() => ShowModal(assignment))">
+                                                        <img class="img-icon" src="/images/show.png" />
+                                                    </Button>
+                                                    <Button Color="Color.Warning" Outline="true" Clicked="@(() => ShowEditModal(assignment))">
+                                                        <img class="img-icon" src="/images/edit.png" />
+                                                    </Button>
+                                                    <Button Color="Color.Danger" Outline="true" Clicked="@(() => DeleteAssignment(assignment))">
+                                                        <img class="img-icon" src="/images/delete.png" />
+                                                    </Button>
+                                                </Div>
+                                            </TableRowCell>
+                                        </TableRow>
+                                    }
+                                </TableBody>
+                            </Table>
+                            <Button Color="Color.Primary" Clicked="@ShowCreateModal" Class="mt-3" Margin=Margin.Is3.FromTop>
+                                <Icon Name="IconName.Add" /> Assign Skill to Team Member
+                            </Button>
+                        }
+                        else
+                        {
+                            <div class="no-skills">
+                                <Icon Name="IconName.InfoCircle" Size="IconSize.X2" />
+                                <p>No skills assigned yet. Click "Add Skill" to get started.</p>
+                                <Button Color="Color.Primary" Clicked="@ShowCreateModal" Class="mt-3" Margin=Margin.Is3.FromTop>
+                                    <Icon Name="IconName.Add" /> Assign Skill
+                                </Button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="no-member-selected">
+                    <h4>Select a Team Member</h4>
+                    <p>Choose a team member from the list to view or edit their skills profile.</p>
+                </div>
+            }
+        </Column>
+    </Row>
+</Div>
+<!-- Modal: Create Skill Assignment -->
+
+<Modal @ref="@createModal">
+    <ModalContent>
+        <ModalHeader>
+            <ModalTitle>Assign New Skill</ModalTitle>
+            <CloseButton Clicked="@HideCreateModal" />
+        </ModalHeader>
+        <ModalBody>
+            <Validations @ref="@validations" Mode="ValidationMode.Manual" Model="@selectedAssignment">
+                <Validation>
+                    <Field>
+                        <FieldLabel>Skill</FieldLabel>
+                        <Select class="dropdown-field" TValue="int" @bind-SelectedValue="@selectedAssignment.SkillId" Style="width:100%; padding:8px;">
+                            <SelectItem Value="0">Select Skill</SelectItem>
+                            @foreach (var skill in FilteredSkills)
+                            {
+                                <SelectItem Value="@skill.Id">@skill.Name</SelectItem>
+                            }
+                        </Select>
+                        <ValidationError For="@(() => selectedAssignment.SkillId)" />
+                    </Field>
+                </Validation>
+                <Validation>
+                    <Field>
+                        <FieldLabel>Skill</FieldLabel>
+                        <Select class="dropdown-field" TValue="ProficiencyLevel" @bind-SelectedValue="@selectedAssignment.Level" Style="width:100%; padding:8px;">
+                            <SelectItem Value="0">Select Level</SelectItem>
+                            @foreach (var level in Enum.GetNames(typeof(ProficiencyLevel)))
+                            {
+                                <SelectItem Value="@level">@level</SelectItem>
+                            }
+                        </Select>
+                        <ValidationError For="@(() => selectedAssignment.Level)" />
+                    </Field>
+                </Validation>
+            </Validations>
+        </ModalBody>
+        <ModalFooter>
+            <Button Color="Color.Secondary" Clicked="@HideCreateModal">Cancel</Button>
+            <Button Color="Color.Primary" Clicked="@SaveAssignment">Save</Button>
+        </ModalFooter>
+    </ModalContent>
+</Modal>
+<!-- Modal: Edit Skill Assignment -->
+<Modal @ref="@editModal">
+    <ModalContent>
+        <ModalHeader>
+            <ModalTitle>Edit Skill Level</ModalTitle>
+            <CloseButton Clicked="@HideEditModal" />
+        </ModalHeader>
+        <ModalBody>
+            <Field>
+                <FieldLabel>Skill</FieldLabel>
+                <p>@GetSkillName(selectedAssignment.SkillId)</p>
+            </Field>
+            <Field>
+                   <FieldLabel>Level</FieldLabel>
+                   <Select class="dropdown-field" TValue="ProficiencyLevel" @bind-SelectedValue="@selectedAssignment.Level" Style="width:100%; padding:8px;">
+                       <SelectItem Value="0">Select Level</SelectItem>
+                    @foreach (var level in Enum.GetNames(typeof(ProficiencyLevel)))
+                       {
+                           <SelectItem Value="@level">@level</SelectItem>
+                       }
+                   </Select>
+                   <ValidationError For="@(() => selectedAssignment.Level)" />
+            </Field>
+        </ModalBody>
+        <ModalFooter>
+            <Button Color="Color.Secondary" Clicked="@HideEditModal">Cancel</Button>
+            <Button Color="Color.Primary" Clicked="@UpdateAssignment">Update</Button>
+        </ModalFooter>
+    </ModalContent>
+</Modal>
+
+
+<AlertModal @ref="alertModal" Title="Alert" Message=@Message />
+<ConfirmDialog @ref="confirmDialogRef" AcceptLabel="Yes" DeclineLabel="No"
+OnConfirmationChanged="ConfirmDeleteChanged">
+    <HeaderContent>
+        <p class="m-0">Confirm Action</p>
+    </HeaderContent>
+    <BodyContent>
+        <p class="m-0">Are you sure you want to remove this skill assignment?</p>
+    </BodyContent>
+</ConfirmDialog>
+@code {
+    private Modal createModal;
+    private Modal editModal;
+    private AlertModal alertModal;
+    private ConfirmDialog confirmDialogRef;
+    private Validations validations;
+    public List<TeamMemberSkillModel> TeamMemberSkills = new List<TeamMemberSkillModel>();
+    public List<SkillModel> Skills = new List<SkillModel>();
+    public List<SkillModel> FilteredSkills = new List<SkillModel>();
+    public List<TeamMemberModel> TeamMembers = new List<TeamMemberModel>();
+    private TeamMemberModel teamMemberToEdit = new();
+    private TeamMemberSkillModel selectedAssignment = new();
+    private TeamMemberModel selectedTeamMember = new TeamMemberModel();
+    private TeamMemberSkillModel assignmentToDelete = new();
+    public string Message { get; set; } = string.Empty;
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        // Load team member skills
+        var assignmentsResult = await teamMemberSkillApiHandler.GetTeamMemberSkillList();
+        if (assignmentsResult.Succeeded && assignmentsResult.Result != null && assignmentsResult.Result.IsSuccess)
+        {
+            TeamMemberSkills = assignmentsResult.Result.Result.Select(a => new TeamMemberSkillModel
+                {
+                    Id = a.Id,
+                    TeamMemberId = a.TeamMemberId,
+                    SkillId = a.SkillId,
+                    Level = a.Level,
+                }).ToList();
+        }
+
+        // Load skills for dropdown
+        var skillsResult = await skillApiHandler.GetSkillList();
+        if (skillsResult.Succeeded && skillsResult.Result != null && skillsResult.Result.IsSuccess)
+        {
+            Skills = skillsResult.Result.Result.Select(s => new SkillModel
+                {
+                    Id = s.Id,
+                    Name = s.Name,
+                    Description = s.Description
+                }).ToList();
+        }
+
+        // Load team members for dropdown
+        var membersResult = await teamMemberApiHandler.GetTeamMemberList();
+        if (membersResult.Succeeded && membersResult.Result != null && membersResult.Result.IsSuccess)
+        {
+            TeamMembers = membersResult.Result.Result.Select(m => new TeamMemberModel
+                {
+                    Id = m.Id,
+                    FirstName = m.FirstName,
+                    LastName = m.LastName,
+                    Title = m.Title,
+                }).ToList();
+        }
+
+    }
+    private async Task ShowModal(TeamMemberSkillModel assignment)
+    {
+        selectedAssignment = assignment != null ? 
+            new TeamMemberSkillModel
+            {
+                Id = assignment.Id,
+                TeamMemberId = selectedTeamMember.Id,
+                SkillId = assignment.SkillId,
+                Level = assignment.Level
+            } : 
+            new TeamMemberSkillModel();
+
+        await editModal.Show();
+    }
+
+    private async Task HideModal()
+    {
+        await editModal.Hide();
+    }
+    private async Task SaveAssignment()
+    {
+        if (await validations.ValidateAll())
+        {
+            var create = await teamMemberSkillApiHandler.CreateTeamMemberSkill(
+                new Framework.ApiCommand.TeamMemberSkill.Request.CreateTeamMemberSkillArgs
+                    {
+                        TeamMemberId = selectedAssignment.TeamMemberId,
+                        SkillId = selectedAssignment.SkillId,
+                        Level = selectedAssignment.Level
+                    });
+
+            if (create.Succeeded && create.Result.IsSuccess)
+            {
+                Message = "Skill assignment created successfully!";
+                await alertModal.Show();
+                // Refresh skills for the selected member
+                await LoadSelectedTeamMemberSkills();
+                await HideCreateModal();
+            }
+            else
+            {
+                Message = "Failed to create skill assignment.";
+                await alertModal.Show();
+            }
+        }
+    }
+    private async Task UpdateAssignment()
+    {
+        var update = await teamMemberSkillApiHandler.UpdateTeamMemberSkill(
+            new Framework.ApiCommand.TeamMemberSkill.Request.UpdateTeamMemberSkillArgs
+                {
+                    Id = selectedAssignment.Id,
+                    TeamMemberId = selectedAssignment.TeamMemberId,
+                    SkillId = selectedAssignment.SkillId,
+                    Level = selectedAssignment.Level
+                });
+
+        if (update.Succeeded && update.Result.IsSuccess)
+        {
+            Message = "Skill assignment updated successfully!";
+            await alertModal.Show();
+            // Refresh skills for the selected member
+            await LoadSelectedTeamMemberSkills();
+            await HideEditModal();
+        }
+        else
+        {
+            Message = "Failed to update assignment.";
+            await alertModal.Show();
+        }
+    }
+    private async Task DeleteAssignment(TeamMemberSkillModel assignment)
+    {
+        assignmentToDelete = assignment;
+        await confirmDialogRef.Open();
+    }
+
+    private async Task ConfirmDeleteChanged(bool value)
+    {
+        if (value)
+        {
+            var deleteResult = await teamMemberSkillApiHandler.DeleteTeamMemberSkill(
+                new Framework.ApiCommand.TeamMemberSkill.Request.DeleteTeamMemberSkillArgs
+                {
+                    Id = assignmentToDelete.Id
+                });
+
+            if (deleteResult.Succeeded && deleteResult.Result.IsSuccess)
+            {
+                Message = "Assignment removed successfully!";
+                await alertModal.Show();
+                await LoadSelectedTeamMemberSkills();
+                StateHasChanged();
+            }
+            else
+            {
+                Message = "Failed to remove assignment.";
+                await alertModal.Show();
+            }
+        }
+    }
+    private async Task SelectTeamMember(TeamMemberModel member)
+    {
+        selectedTeamMember = member;
+        // Filter skills for the selected member
+        await LoadSelectedTeamMemberSkills();
+    }
+    public string GetTeamMemberName(int teamMemberId)
+    {
+        var member = TeamMembers.FirstOrDefault(a => a.Id == teamMemberId);
+        return member != null ? $"{member.FirstName} {member.LastName}" : "Unknown";
+    }
+    private string GetSkillName(int skillId)
+    {
+        return Skills.FirstOrDefault(a => a.Id == skillId)?.Name ?? "Unknown";
+    }
+    private async Task ShowCreateModal()
+    {
+        selectedAssignment = new TeamMemberSkillModel
+            {
+                TeamMemberId = selectedTeamMember.Id,
+            };
+        FilterSkills();
+        await createModal.Show();
+    }
+
+    private async Task ShowEditModal(TeamMemberSkillModel assignment)
+    {
+        selectedAssignment = new TeamMemberSkillModel
+            {
+                Id = assignment.Id,
+                TeamMemberId = assignment.TeamMemberId,
+                SkillId = assignment.SkillId,
+                Level = assignment.Level
+            };
+        FilterSkills();
+        await editModal.Show();
+    }
+    private async Task HideCreateModal() => await createModal.Hide();
+    private async Task HideEditModal() => await editModal.Hide();
+    private void FilterSkills()
+    {
+        // Filter skills to only include those not already assigned to the selected team member
+        var assignedSkillIds = TeamMemberSkills
+            .Where(s => s.TeamMemberId == selectedTeamMember.Id)
+            .Select(s => s.SkillId)
+            .ToList();
+
+        FilteredSkills = Skills.Where(skill => !assignedSkillIds.Contains(skill.Id)).ToList();
+
+    }
+    private async Task LoadSelectedTeamMemberSkills()
+    {
+        await LoadData();
+        // Filter skills for the selected member
+        TeamMemberSkills = TeamMemberSkills
+            .Where(s => s.TeamMemberId == selectedTeamMember.Id)
+            .ToList();
+    }
+    public class TSkillModel
+    {
+        public int Id { get; set; }
+
+        public int SkillId { get; set; }
+
+        public int Level { get; set; }
+
+        public int TeamMemberId { get; set; }
+    }
+}

@@ -1,0 +1,50 @@
+﻿<Bar Breakpoint="Breakpoint.Desktop"
+     Background="Background.Light"
+     ThemeContrast="ThemeContrast.Light"
+Padding="Padding.Is2">
+    <BarBrand>
+        <a href="/" class="navbar-brand">
+            Avatar
+        </a>
+    </BarBrand>
+    <BarToggler />
+    <BarMenu>
+        <BarStart>
+            <BarItem>
+                <BarLink To="/team-member-skill">
+                     Builder
+                </BarLink>
+            </BarItem>
+            <BarItem>
+                <BarDropdown>
+                    <BarDropdownToggle>
+                        <span class="oi oi-wrench"></span> Maintenance
+                    </BarDropdownToggle>
+                    <BarDropdownMenu>
+                        <BarDropdownItem>
+                            <NavLink class="nav-link" href="/skill" Match="NavLinkMatch.All">
+                                <span class="oi oi-home" aria-hidden="true"></span> Skill Management
+                            </NavLink>
+                        </BarDropdownItem>
+                        <BarDropdownDivider />
+                        <BarDropdownItem>
+                            <NavLink class="nav-link" href="/team-member">
+                                <span class="oi oi-list-rich" aria-hidden="true"></span> Team Management
+                            </NavLink>
+                        </BarDropdownItem>
+                    </BarDropdownMenu>
+                </BarDropdown>
+            </BarItem>
+        </BarStart>
+    </BarMenu>
+</Bar>
+@code {
+    private bool collapseNavMenu = true;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}

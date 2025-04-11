@@ -1,0 +1,320 @@
+﻿@page "/team-member"
+@using Blazorise
+@using Avatar.Web.Models
+@using Avatar.Web.Modules.ApiAccess.Handlers
+@using Avatar.Web.Components
+@using Avatar.Web.Models
+@inject ITeamMemberApiHandler teamMemberApiHandler
+@inject ITeamMemberSkillApiHandler teamMemberSkillApiHandler
+@inject IJSRuntime JSRuntime
+
+<Button Color="Color.Primary" Clicked="@(() => ShowModal(null))" Class="mb-3">
+    <Icon Name="IconName.Add" /> Add New Team Member
+</Button>
+
+<Table Hoverable="true" Bordered="true" Responsive="true">
+    <TableHeader ThemeContrast="ThemeContrast.Light">
+        <TableRow>
+            <TableHeaderCell>Id</TableHeaderCell>
+            <TableHeaderCell>First Name</TableHeaderCell>
+            <TableHeaderCell>Last Name</TableHeaderCell>
+            <TableHeaderCell>Title</TableHeaderCell>
+            <TableHeaderCell>Actions</TableHeaderCell>
+        </TableRow>
+    </TableHeader>
+    <TableBody>
+        @if (TeamMembers.Any())
+        {
+            @foreach (var member in TeamMembers)
+            {
+                <TableRow>
+                    <TableRowCell>@member.Id</TableRowCell>
+                    <TableRowCell>@member.FirstName</TableRowCell>
+                    <TableRowCell>@member.LastName</TableRowCell>
+                    <TableRowCell>@member.Title</TableRowCell>
+                    <TableRowCell>
+                        <Div>
+                            <Button Color="Color.Info" Outline="true" Clicked="@(() => ViewMember(member))">
+                                <img class="img-icon" src="/images/show.png" />
+                            </Button>
+                            <Button Color="Color.Warning" Outline="true" Clicked="@(() => ShowModal(member))">
+                                <img class="img-icon" src="/images/edit.png" />
+                            </Button>
+                            <Button Color="Color.Danger" Outline="true" Clicked="@(() => DeleteMember(member))">
+                                <img class="img-icon" src="/images/delete.png" />
+                            </Button>
+                        </Div>
+                    </TableRowCell>
+                </TableRow>
+            }
+        }
+        else
+        {
+            <TableRow>
+                <TableRowCell ColumnSpan="6" Class="text-center">
+                    <p>No team members found.</p>
+                </TableRowCell>
+            </TableRow>
+        }
+    </TableBody>
+</Table>
+
+<!-- Modal for Add/Edit -->
+<Modal @ref="@editModal">
+    <ModalContent>
+        <ModalHeader>
+            <ModalTitle>@(selectedMember?.Id == 0 ? "Add New Team Member" : "Edit Team Member")</ModalTitle>
+            <CloseButton Clicked="@HideModal" Style="background-color:transparent;border:none;" />
+        </ModalHeader>
+        <ModalBody>
+            <Validations @ref="@validations" Mode="ValidationMode.Manual" Model="@selectedMember">
+               <Validation>
+                   <Field>
+                        <FieldLabel>First Name*</FieldLabel>
+                        <TextEdit @bind-Text="@selectedMember.FirstName"/>
+                        <ValidationError For="@(() => selectedMember.FirstName)" />
+                    </Field>
+               </Validation>
+               <Validation>
+                    <Field>
+                        <FieldLabel>Last Name*</FieldLabel>
+                        <TextEdit @bind-Text="@selectedMember.LastName"/>
+                        <ValidationError For="@(() => selectedMember.LastName)" />
+                    </Field>
+                </Validation>
+                <Validation>
+                    <Field>
+                        <FieldLabel>Title*</FieldLabel>
+                        <TextEdit @bind-Text="@selectedMember.Title"/>
+                        <ValidationError For="@(() => selectedMember.Title)" />
+                    </Field>
+                </Validation>
+            </Validations>
+        </ModalBody>
+        <ModalFooter>
+            <Button Color="Color.Secondary" Clicked="@HideModal">Cancel</Button>
+            <Button Color="Color.Primary" Clicked="@SaveMember">Save</Button>
+        </ModalFooter>
+    </ModalContent>
+</Modal>
+
+<!-- Modal for View -->
+<Modal @ref="@viewModal">
+    <ModalContent>
+        <ModalHeader>
+            <ModalTitle>Team Member Details</ModalTitle>
+            <CloseButton Clicked="@HideViewModal" Style="background-color:transparent;border:none;" />
+        </ModalHeader>
+        <ModalBody>
+            <Field>
+                <FieldLabel>Id</FieldLabel>
+                <TextEdit ReadOnly="true" Text="@selectedMember.Id.ToString()" />
+            </Field>
+            <Field>
+                <FieldLabel>First Name</FieldLabel>
+                <TextEdit ReadOnly="true" Text="@selectedMember.FirstName" />
+            </Field>
+            <Field>
+                <FieldLabel>Last Name</FieldLabel>
+                <TextEdit ReadOnly="true" Text="@selectedMember.LastName" />
+            </Field>
+            <Field>
+                <FieldLabel>Title</FieldLabel>
+                <TextEdit ReadOnly="true" Text="@selectedMember.Title" />
+            </Field>
+        </ModalBody>
+        <ModalFooter>
+            <Button Color="Color.Secondary" Clicked="@HideViewModal">Close</Button>
+        </ModalFooter>
+    </ModalContent>
+</Modal>
+
+<AlertModal @ref="alertModal" Title="Alert" Message=@Message />
+<ConfirmDialog @ref="confirmDialogRef" AcceptLabel="Yes" DeclineLabel="No"
+OnConfirmationChanged="ConfirmDeleteChanged">
+    <HeaderContent>
+        <p class="m-0">Confirm Action</p>
+    </HeaderContent>
+    <BodyContent>
+        <p class="m-0">Are you sure you want to remove this team member?</p>
+    </BodyContent>
+</ConfirmDialog>
+
+@code {
+    private Modal editModal;
+    private Modal viewModal;
+    private AlertModal alertModal;
+    private ConfirmDialog confirmDialogRef;
+    private Validations validations;
+    public List<TeamMemberModel> TeamMembers = new List<TeamMemberModel>();
+    private TeamMemberModel selectedMember = new();
+    private TeamMemberModel memberToDelete = new();
+    public string Message { get; set; } = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTeamMembers();
+    }
+
+    private async Task LoadTeamMembers()
+    {
+        var result = await teamMemberApiHandler.GetTeamMemberList();
+        if (result.Succeeded && result.Result != null && result.Result.IsSuccess)
+        {
+            TeamMembers = result.Result.Result.Select(m => new TeamMemberModel
+            {
+                Id = m.Id,
+                FirstName = m.FirstName,
+                LastName = m.LastName,
+                Title = m.Title
+            }).ToList();
+        }
+        else
+        {
+            Message = "Failed to load team members.";
+            await alertModal.Show();
+        }
+    }
+
+    private async Task ShowModal(TeamMemberModel member)
+    {
+        selectedMember = member ?? new TeamMemberModel(); // Reset if null
+        await editModal.Show();
+    }
+
+    private async Task HideModal()
+    {
+        await editModal.Hide();
+    }
+
+    private async Task ViewMember(TeamMemberModel member)
+    {
+        selectedMember = member;
+        await viewModal.Show();
+    }
+
+    private async Task HideViewModal()
+    {
+        await viewModal.Hide();
+    }
+
+    private async Task SaveMember()
+    {
+        if (await validations.ValidateAll())
+        {
+            // Check for existing member (excluding current if updating)
+            bool memberExists = TeamMembers.Any(m =>
+                m.FirstName.Trim().ToLower() == selectedMember.FirstName.Trim().ToLower() &&
+                m.LastName.Trim().ToLower() == selectedMember.LastName.Trim().ToLower());
+            
+            if (memberExists)
+            {
+                Message = "Member already exists.";
+                await alertModal.Show();
+                return;
+            }
+
+            if (selectedMember.Id == 0)
+            {
+                // Add new team member
+                var createResult = await teamMemberApiHandler.CreateTeamMember(
+                    new Framework.ApiCommand.TeamMember.Request.CreateTeamMemberArgs
+                    {
+                        FirstName = selectedMember.FirstName,
+                        LastName = selectedMember.LastName,
+                        Title = selectedMember.Title,
+                    });
+
+                if (createResult.Succeeded && createResult.Result.IsSuccess)
+                {
+                    Message = "Team member created successfully!";
+                    await alertModal.Show();
+                }
+                else
+                {
+                    Message = "Failed to create team member.";
+                    await alertModal.Show();
+                }
+            }
+            else
+            {
+                // Update existing team member
+                var updateResult = await teamMemberApiHandler.UpdateTeamMember(
+                    new Framework.ApiCommand.TeamMember.Request.UpdateTeamMembeArgs
+                    {
+                        Id = selectedMember.Id,
+                        FirstName = selectedMember.FirstName,
+                        LastName = selectedMember.LastName,
+                        Title = selectedMember.Title    
+                    });
+                
+                if (updateResult.Succeeded && updateResult.Result.IsSuccess)
+                {
+                    Message = "Team member updated successfully!";
+                    await alertModal.Show();
+                }
+                else
+                {
+                    Message = "Failed to update team member.";
+                    await alertModal.Show();
+                }
+            }
+            
+            await HideModal();
+            await LoadTeamMembers();
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteMember(TeamMemberModel member)
+    {
+        memberToDelete = member;
+        await confirmDialogRef.Open();
+    }
+
+    private async Task ConfirmDeleteChanged(bool value)
+    {
+        if (value)
+        {
+            // First check if member has any skills assigned
+            var hasSkills = await CheckMemberHasSkills(memberToDelete.Id);
+            if (hasSkills)
+            {
+                Message = "Cannot delete team member with assigned skills. Remove skills first.";
+                await alertModal.Show();
+                return;
+            }
+
+            var deleteResult = await teamMemberApiHandler.DeleteTeamMember(
+                new Framework.ApiCommand.TeamMember.Request.DeleteTeamMemberArgs
+                {
+                    Id = memberToDelete.Id
+                });
+            
+            if (deleteResult.Succeeded && deleteResult.Result.IsSuccess)
+            {
+                Message = "Team member deleted successfully!";
+                await alertModal.Show();
+                await LoadTeamMembers(); // Refresh the data
+                StateHasChanged();
+            }
+            else
+            {
+                Message = "Failed to delete team member.";
+                await alertModal.Show();
+            }
+        }
+    }
+
+    private async Task<bool> CheckMemberHasSkills(int memberId)
+    {
+        // You would need to implement this check with your API
+        // This is just a placeholder implementation
+        var skillsResult = await teamMemberSkillApiHandler.GetTeamMemberSkillList();
+        if (skillsResult.Succeeded && skillsResult.Result != null && skillsResult.Result.IsSuccess)
+        {
+            return skillsResult.Result.Result.Any(s => s.TeamMemberId == memberId);
+        }
+        return false;
+    }
+}

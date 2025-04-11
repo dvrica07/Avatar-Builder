@@ -1,0 +1,287 @@
+﻿@page "/skill"
+@using Blazorise
+@using Avatar.Web.Models
+@using Avatar.Web.Modules.ApiAccess.Handlers
+@using Avatar.Web.Components
+@inject ISkillApiHandler skillApiHandler
+@inject ITeamMemberSkillApiHandler teamMemberSkillApiHandler
+@inject IJSRuntime JSRuntime
+
+<Button Color="Color.Primary" Clicked="@(() => ShowModal(null))" Class="mb-3">
+    <Icon Name="IconName.Add" /> Add New Skill
+</Button>
+<Table Hoverable="true" Bordered="true" Responsive="true">
+    <TableHeader ThemeContrast="ThemeContrast.Light">
+        <TableRow>
+            <TableHeaderCell>Id</TableHeaderCell>
+            <TableHeaderCell>Name</TableHeaderCell>
+            <TableHeaderCell>Description</TableHeaderCell>
+            <TableHeaderCell>Actions</TableHeaderCell>
+        </TableRow>
+    </TableHeader>
+    <TableBody>
+        @if (Skills.Any())
+        {
+            @foreach (var skill in Skills)
+            {
+                <TableRow>
+                    <TableRowCell>@skill.Id</TableRowCell>
+                    <TableRowCell>@skill.Name</TableRowCell>
+                    <TableRowCell>@skill.Description</TableRowCell>
+                    <TableRowCell>
+                        <Div>
+                            <Button Color="Color.Info" Outline="true" Clicked="@(() => ViewUser(skill))">
+                                <img class="img-icon" src="/images/show.png"/>
+                            </Button>
+                            <Button Color="Color.Warning" Outline="true" Clicked="@(() => ShowModal(skill))">
+                                <img class="img-icon" src="/images/edit.png" />
+                            </Button>
+                            <Button Color="Color.Danger" Outline="true" Clicked="@(() => DeleteUser(skill))">
+                                <img class="img-icon" src="/images/delete.png" />
+                            </Button>
+                        </Div>
+                    </TableRowCell>
+                </TableRow>
+            }
+        }
+        else
+        {
+            <TableRow>
+                <TableRowCell ColumnSpan="6" Class="text-center">
+                    <p>No skills found.</p>
+                </TableRowCell>
+            </TableRow>
+        }
+
+    </TableBody>
+</Table>
+
+<!-- Modal for Add/Edit -->
+<Modal @ref="@editModal">
+    <ModalContent>
+        <ModalHeader>
+            <ModalTitle>@(selectedSkill?.Id == 0 ? "Add New Skill" : "Edit Skill")</ModalTitle>
+            <CloseButton Clicked="@HideModal" Style="background-color:transparent;border:none;" />
+        </ModalHeader>
+        <ModalBody>
+            <Validations @ref="@validations" Mode="ValidationMode.Manual" Model="@selectedSkill">
+                <Validation>
+                    <Field>
+                        <FieldLabel>Name</FieldLabel>
+                        <TextEdit @bind-Text="@selectedSkill.Name"/>
+                        <ValidationError For="@(() => selectedSkill.Name)" />
+                    </Field>
+                </Validation>
+                <Validation>
+                    <Field>
+                        <FieldLabel>Description</FieldLabel>
+                        <TextEdit @bind-Text="@selectedSkill.Description" />
+                        <ValidationError For="@(() => selectedSkill.Description)" />
+                    </Field>
+                </Validation>
+            </Validations>
+        </ModalBody>
+        <ModalFooter>
+            <Button Color="Color.Secondary" Clicked="@HideModal">Cancel</Button>
+            <Button Color="Color.Primary" Clicked="@SaveUser">Save</Button>
+        </ModalFooter>
+    </ModalContent>
+</Modal>
+
+<!-- Modal for View -->
+<Modal @ref="@viewModal">
+    <ModalContent>
+        <ModalHeader>
+            <ModalTitle>User Details</ModalTitle>
+            <CloseButton Clicked="@HideViewModal" Style="background-color:transparent;border:none;" />
+        </ModalHeader>
+        <ModalBody>
+            <Field>
+                <FieldLabel>Id</FieldLabel>
+                <TextEdit ReadOnly="true" Text="@selectedSkill.Id.ToString()" />
+            </Field>
+            <Field>
+                <FieldLabel>Name</FieldLabel>
+                <TextEdit ReadOnly="true" Text="@selectedSkill.Name" />
+            </Field>
+            <Field>
+                <FieldLabel>Email</FieldLabel>
+                <TextEdit ReadOnly="true" Text="@selectedSkill.Description" />
+            </Field>
+        </ModalBody>
+        <ModalFooter>
+            <Button Color="Color.Secondary" Clicked="@HideViewModal">Close</Button>
+        </ModalFooter>
+    </ModalContent>
+</Modal>
+<AlertModal @ref="alertModal" Title="Alert" Message=@Message />
+<ConfirmDialog @ref="confirmDialogRef" AcceptLabel="Yes" DeclineLabel="No"
+OnConfirmationChanged="ConfirmDeleteChanged">
+    <HeaderContent>
+        <p class="m-0">Confirm Action</p>
+    </HeaderContent>
+    <BodyContent>
+        <p class="m-0">Are you sure you want to remove this ticket?</p>
+    </BodyContent>
+</ConfirmDialog>
+@code {
+    private Modal editModal;
+    private Modal viewModal;
+    private AlertModal alertModal;
+    private ConfirmDialog confirmDialogRef;
+    private Validations validations;
+    public List<SkillModel> Skills = new List<SkillModel>();
+    private SkillModel selectedSkill= new();
+    private SkillModel skillToDelete = new();
+    public string Message { get; set; } = string.Empty;
+    public string HeaderContent { get; set; } = string.Empty;
+    public string BodyContent { get; set; } = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Sample data
+        await LoadSkills();
+    }
+    private async Task LoadSkills()
+    {
+        var result = await skillApiHandler.GetSkillList();
+        if (result.Succeeded && result.Result != null && result.Result.IsSuccess)
+        {
+            Skills = result.Result.Result.Select(s =>
+            {
+                return new SkillModel
+                    {
+                        Id = s.Id,
+                        Description = s.Description,
+                        Name = s.Name,
+                    };
+            }).ToList();
+        }
+    }
+
+    private async Task ShowModal(SkillModel skill)
+    {
+        selectedSkill = skill ?? new SkillModel();
+        await editModal.Show();
+    }
+
+    private async Task HideModal()
+    {
+        await editModal.Hide();
+    }
+
+    private async Task ViewUser(SkillModel skill)
+    {
+        selectedSkill = skill ?? new SkillModel();
+        await viewModal.Show();
+    }
+
+    private async Task HideViewModal()
+    {
+        await viewModal.Hide();
+    }
+
+    private async Task SaveUser()
+    {
+        if (await validations.ValidateAll())
+        {
+            if (selectedSkill.Id == 0)
+            {
+                //Checking if the skill is already in use
+                bool skillExists = Skills.Any(s =>
+                    s.Name.Trim().ToLower() == selectedSkill.Name.Trim().ToLower());
+
+                if (skillExists)
+                {
+                    Message = "Skill already exists.";
+                    await alertModal.Show();
+                    return;
+                }
+                var createSkill = await skillApiHandler.CreateSkill(new Framework.ApiCommand.Skill.Request.CreateSkillArgs
+                {
+                    Name = selectedSkill.Name,
+                    Description = selectedSkill.Description,
+                });
+                if (createSkill.Succeeded && createSkill.Result.IsSuccess)
+                {
+
+                    Message = "Skill created successfully!";
+                    await alertModal.Show();
+                    await LoadSkills();
+                }
+                else
+                {
+                    Message = "Failed to create skill.";
+                    await alertModal.Show();
+                }
+            }
+            else
+            {
+                // Update existing user
+                var existingSkill = Skills.FirstOrDefault(u => u.Id == selectedSkill.Id);
+                if (existingSkill != null)
+                {
+                    existingSkill.Name = selectedSkill.Name;
+                    existingSkill.Description = selectedSkill.Description;
+                    //Update the user in the database
+                    var updateSkill = await skillApiHandler.UpdateSkill(new Framework.ApiCommand.Skill.Request.UpdateSkillArgs
+                        {
+                            Id = selectedSkill.Id,
+                            Name = selectedSkill.Name,
+                            Description = selectedSkill.Description,
+                        });
+                    if (updateSkill.Succeeded && updateSkill.Result.IsSuccess)
+                    {
+                        Message = "Skill updated successfully!";
+                        await alertModal.Show();
+                        await LoadSkills();
+                    }
+                    else
+                    {
+                        Message = "Failed to update skill.";
+                        await alertModal.Show();
+                    }
+                }
+            }
+            await HideModal();
+            await LoadSkills();
+            StateHasChanged();
+        }
+    }
+    private async Task DeleteUser(SkillModel skill)
+    {
+        skillToDelete = skill;
+        await confirmDialogRef.Open();
+    }
+    private async Task ConfirmDeleteChanged(bool value)
+    {
+        if (value)
+        {
+            //Add checking if skill is used in team member skill
+            var checkSkill = await teamMemberSkillApiHandler.GetTeamMemberSkillById(new Framework.ApiCommand.TeamMemberSkill.Request.GetTeamMemberSkillByIdArgs
+            {
+                SkillId = skillToDelete.Id
+            });
+            if (checkSkill.Succeeded && checkSkill.Result.Result.Count() > 0)
+            {
+                //If not used in team member skill
+                Message = "Skill is currently used.";
+                await alertModal.Show();
+            }
+            else
+            {
+                var deleteSkill = await skillApiHandler.DeleteSkill(new Framework.ApiCommand.Skill.Request.DeleteSkillArgs
+                    {
+                        Id = skillToDelete.Id
+                    });
+                if (deleteSkill.Succeeded && deleteSkill.Result.IsSuccess)
+                {
+                    Message = "Skill deleted successfully!";
+                    await alertModal.Show();
+                    await LoadSkills();
+                    StateHasChanged();
+                }
+            }  
+        }
+    }
+}

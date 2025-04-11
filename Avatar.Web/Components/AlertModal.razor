@@ -1,0 +1,35 @@
+﻿@namespace Avatar.Web.Components
+
+<Modal @ref="modalRef" Centered="true">
+    <ModalContent>
+        <ModalHeader>
+            <ModalTitle>
+                @Title
+            </ModalTitle>
+            <CloseButton @onclick="Close" Style="background-color:transparent;border:none;" />
+        </ModalHeader>
+        <ModalBody>
+            @Message
+        </ModalBody>
+    </ModalContent>
+</Modal>
+@code {
+    private Modal modalRef;
+    [Parameter]
+    public string Title { get; set; }
+    [Parameter]
+    public string Message { get; set; }
+    [Parameter]
+    public EventCallback<bool> OnClose { get; set; }
+    public async Task Show()
+    {
+        await modalRef.Show();
+    }
+    public Task Close()
+    {
+        return modalRef.Close(CloseReason.UserClosing);
+    }
+}
+@code {
+
+}

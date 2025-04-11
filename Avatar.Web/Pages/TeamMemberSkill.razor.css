@@ -1,0 +1,124 @@
+﻿.img-icon {
+    width: 15px;
+    height: 15px;
+}
+.skill-builder-section {
+    padding: 1rem;
+    height: calc(100vh - 2rem);
+}
+
+.team-member-sidebar {
+    background-color: #f8f9fa;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.team-member-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.team-member-card {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+    .team-member-card:hover {
+        background-color: #e9ecef;
+    }
+
+    .team-member-card.active {
+        background-color: #e7f1ff;
+        border-left: 3px solid #0d6efd;
+    }
+
+.member-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #0d6efd;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    font-weight: bold;
+}
+
+.member-info {
+    flex: 1;
+}
+
+.member-name {
+    font-weight: 500;
+}
+
+.member-title {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+.profile-details {
+    padding: 1rem;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.profile-header {
+    margin-bottom: 2rem;
+}
+
+.skills-table {
+    background-color: white;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.skill-level {
+    display: flex;
+    align-items: center;
+}
+
+.level-bar {
+    height: 20px;
+    background-color: #0d6efd;
+    border-radius: 4px;
+    margin-right: 10px;
+}
+
+.level-value {
+    font-weight: 500;
+}
+
+.no-skills {
+    text-align: center;
+    padding: 2rem;
+    color: #6c757d;
+}
+
+.no-member-selected {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    color: #6c757d;
+}
