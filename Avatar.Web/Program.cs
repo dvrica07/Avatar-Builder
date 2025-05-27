@@ -5,6 +5,7 @@ using Blazorise.Icons.FontAwesome;
 using Flurl.Http;
 using Flurl.Http.Configuration;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 
@@ -21,6 +22,9 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddBlazorise(options => { options.Immediate = true; })
     .AddBootstrapProviders()
     .AddFontAwesomeIcons();
+
+//Telerik
+builder.Services.AddTelerikBlazor();
 
 // add config
 Avatar.Web.Config.Config config = new Avatar.Web.Config.Config();
