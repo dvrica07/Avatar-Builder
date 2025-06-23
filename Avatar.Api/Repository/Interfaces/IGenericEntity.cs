@@ -1,5 +1,6 @@
 ﻿using Avatar.Api.Repository.Entities;
 using Avatar.Framework.Common;
+using Microsoft.Data.SqlClient;
 using System.Linq.Expressions;
 
 namespace Avatar.Api.Repository.Interfaces;
@@ -20,4 +21,7 @@ public interface IGenericEntity<TTarget> where TTarget : BaseEntity
     Task<AppResult<IEnumerable<TTarget>>> RemoveRange(IEnumerable<TTarget> entities);
     Task<AppResult<TTarget>> Update(TTarget entity);
     Task<AppResult<IEnumerable<TTarget>>> UpdateRange(IEnumerable<TTarget> entities);
+    Task<AppResult<IEnumerable<TTarget>>> ExecuteStoredProcAsync(string storedProcName, params SqlParameter[] parameters);
+    Task<AppResult<IEnumerable<TTarget>>> QueryViewAsync();
+    Task<AppResult<IEnumerable<TResult>>> CallFunctionAsync<TResult>(string sql, params object[] parameters) where TResult : class;
 }

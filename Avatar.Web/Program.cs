@@ -23,8 +23,8 @@ builder.Services.AddBlazorise(options => { options.Immediate = true; })
     .AddBootstrapProviders()
     .AddFontAwesomeIcons();
 
-//Telerik
-builder.Services.AddTelerikBlazor();
+////Telerik
+//builder.Services.AddTelerikBlazor();
 
 // add config
 Avatar.Web.Config.Config config = new Avatar.Web.Config.Config();

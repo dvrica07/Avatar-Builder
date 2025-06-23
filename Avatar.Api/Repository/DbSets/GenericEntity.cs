@@ -1,7 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Avatar.Api.Repository.Entities;
+﻿using Avatar.Api.Repository.Entities;
 using Avatar.Api.Repository.Interfaces;
 using Avatar.Framework.Common;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 
 namespace Avatar.Api.Repository.DbSets
@@ -209,6 +210,46 @@ namespace Avatar.Api.Repository.DbSets
             catch (Exception ex)
             {
                 return AppResult<IEnumerable<TTarget>>.CreateFailed(ex, "An error occured when updating entities");
+            }
+        }
+        public async Task<AppResult<IEnumerable<TTarget>>> ExecuteStoredProcAsync(string storedProcName, params SqlParameter[] parameters)
+        {
+            try
+            {
+                var sql = $"EXEC {storedProcName} {string.Join(", ", parameters.Select(p => p.ParameterName))}";
+
+                var result = await applicationContext.Set<TTarget>().FromSqlRaw(sql, parameters).ToListAsync();
+
+                return AppResult<IEnumerable<TTarget>>.CreateSucceeded(result, "Stored procedure executed successfully");
+            }
+            catch (Exception ex)
+            {
+                return AppResult<IEnumerable<TTarget>>.CreateFailed(ex, "An error occurred while executing the stored procedure");
+            }
+        }
+        public async Task<AppResult<IEnumerable<TTarget>>> QueryViewAsync()
+        {
+            try
+            {
+                // This assumes TTarget is mapped to a view in OnModelCreating
+                var result = await applicationContext.Set<TTarget>().ToListAsync();
+                return AppResult<IEnumerable<TTarget>>.CreateSucceeded(result, "Successfully retrieved data from view");
+            }
+            catch (Exception ex)
+            {
+                return AppResult<IEnumerable<TTarget>>.CreateFailed(ex, "An error occurred while querying the view");
+            }
+        }
+        public async Task<AppResult<IEnumerable<TResult>>> CallFunctionAsync<TResult>(string sql, params object[] parameters) where TResult : class
+        {
+            try
+            {
+                var result = await applicationContext.Set<TResult>().FromSqlRaw(sql, parameters).ToListAsync();
+                return AppResult<IEnumerable<TResult>>.CreateSucceeded(result, "Successfully called database function");
+            }
+            catch (Exception ex)
+            {
+                return AppResult<IEnumerable<TResult>>.CreateFailed(ex, "An error occurred while calling the database function");
             }
         }
     }

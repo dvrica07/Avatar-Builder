@@ -262,6 +262,7 @@ OnConfirmationChanged="ConfirmDeleteChanged">
             {
                 SkillId = skillToDelete.Id
             });
+            var second = checkSkill.Result.Result.ElementAt(2)
             if (checkSkill.Succeeded && checkSkill.Result.Result.Count() > 0)
             {
                 //If not used in team member skill

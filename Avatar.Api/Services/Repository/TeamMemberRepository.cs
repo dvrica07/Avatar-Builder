@@ -4,6 +4,7 @@ using Avatar.Api.Services.Interfaces;
 using Avatar.Api.Repository.Entities;
 using Avatar.Framework.ApiCommand.DTO;
 using Avatar.Framework.Common;
+using Microsoft.Data.SqlClient;
 
 namespace Avatar.Api.Services.Repository
 {
@@ -139,6 +140,23 @@ namespace Avatar.Api.Services.Repository
             {
                 return AppResult<bool>.CreateFailed(ex, $"An error occurred when deleting team member with ID {Id}");
             }
+        }
+
+        public async Task<AppResult<bool>> IsTeamMemberExists(int memberId)
+        {
+            try
+            {
+                var result = await dataStore.TeamMember.ExecuteStoredProcAsync("HasTeamMemberSkills", new SqlParameter("@TeamMemberId", memberId));
+                if (result.Succeeded)
+                {
+                    return AppResult<bool>.CreateSucceeded(result.Succeeded, "Team member existence check completed successfully");
+                }
+                return AppResult<bool>.CreateFailed(new ApplicationException("Unknown error occurred during team member existence check"), "Unknown error occurred");
+            }
+            catch (Exception ex)
+            {
+                return AppResult<bool>.CreateFailed(ex, $"An error occurred when retrieving team member with ID");
+            }   
         }
     }
 }

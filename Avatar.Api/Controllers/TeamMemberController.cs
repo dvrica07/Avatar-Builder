@@ -102,6 +102,25 @@ namespace Avatar.Api.Controllers
                 return new JsonResult(new DeleteTeamMemberResult { ErrorInfo = new ErrorInfo { Message = ex.Message } });
             }
         }
-
+        [Route("IsTeamMemberExists")]
+        [HttpPost]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
+        public async Task<IActionResult> IsTeamMemberExists([FromBody] IsTeamMemberExistArgs args)
+        {
+            try
+            {
+                var result = await teamMemberRepository.IsTeamMemberExists(args.memberId);
+                if (!result.Succeeded || !result.Result)
+                {
+                    return new JsonResult(new { IsSuccess = false, Message = result.Message });
+                }
+                return new JsonResult(new { IsSuccess = true, Result = result.Result });
+            }
+            catch (Exception ex)
+            {
+                return new JsonResult(new { IsSuccess = false, Message = ex.Message });
+            }
+        }
     }
 }

@@ -11,5 +11,6 @@ namespace Avatar.Api.Services.Interfaces
         Task<AppResult<TeamMemberDTO>> UpdateTeamMember(TeamMemberDTO teamMemberDTO);
         Task<AppResult<bool>> DeleteTeamMember(int Id);
         Task<AppResult<TeamMemberDTO>> GetTeamMemberById(int id);
+        Task<AppResult<bool>>IsTeamMemberExists(int memberId);
     }
 }

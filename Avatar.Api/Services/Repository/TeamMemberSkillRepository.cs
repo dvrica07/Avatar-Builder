@@ -4,6 +4,7 @@ using Avatar.Api.Services.Interfaces;
 using Avatar.Api.Repository.Entities;
 using Avatar.Framework.ApiCommand.DTO;
 using Avatar.Framework.Common;
+using Microsoft.Data.SqlClient;
 
 namespace Avatar.Api.Services.Repository
 {
@@ -55,7 +56,7 @@ namespace Avatar.Api.Services.Repository
         {
             try
             {
-                var result = await dataStore.TeamMemberSkill.FindAsync(tms => tms.SkillId == id);
+                var result = await dataStore.TeamMemberSkill.ExecuteStoredProcAsync("GetTeamMemberSkillsBySkillId", new SqlParameter("@SkillId", id));
 
                 if (result == null)
                 {
