@@ -56,7 +56,7 @@ namespace Avatar.Api.Services.Repository
         {
             try
             {
-                var result = await dataStore.Skill.GetByIdAsync(id);
+                var result =await dataStore.Skill.GetByIdAsync(id);
                 if (!result.Succeeded || result.Result == null)
                 {
                     return AppResult<SkillDTO>.CreateFailed(result.Error.Exception, result.Message);
